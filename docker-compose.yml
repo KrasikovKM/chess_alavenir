@@ -5,7 +5,7 @@ services:
     volumes:
       - ./app:/app
     env_file:
-      - ./app/.env
+      - ./.env
     expose:
       - "8080"
     environment:
@@ -22,8 +22,6 @@ services:
     image: postgres:17.5-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    env_file:
-      - ./app/.env
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
@@ -41,8 +39,6 @@ services:
     image: dpage/pgadmin4
     container_name: pgadmin
     restart: unless-stopped
-    env_file:
-      - ./app/.env
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PG_ADMIN_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PG_ADMIN_PASS}
