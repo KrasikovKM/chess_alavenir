@@ -42,7 +42,7 @@ services:
     container_name: pgadmin
     restart: unless-stopped
     env_file:
-      - app/.env
+      - ./app/.env
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PG_ADMIN_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PG_ADMIN_PASS}
