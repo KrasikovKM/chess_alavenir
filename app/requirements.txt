@@ -1,0 +1,12 @@
+fastapi
+python-multipart
+asyncpg
+psycopg2-binary==2.9.9
+sqlalchemy
+alembic
+uvicorn
+pillow
+tensorflow>=2.15
+keras>=3.0
+numpy
+python-dotenv==1.0.0
