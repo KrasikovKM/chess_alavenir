@@ -177,3 +177,5 @@ cython_debug/
 **/media/*
 **/media/last_recognition/*
 /alembic/versions/*
+exporter.py
+project_export.txt
