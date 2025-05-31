@@ -107,7 +107,7 @@ async def process_chess_board(image_path: Path, x1: int, y1: int, x2: int, y2: i
                     )
                 )
                 resized = cell.resize(SIZE, resample=Image.Resampling.LANCZOS).crop(SIZE_TO_CROP)
-                cell.save(f"media/last_recognition/{i}_{j}.png")
+                # cell.save(f"media/last_recognition/{i}_{j}.png")
                 I = np.array(resized) / 255.0
                 I = np.expand_dims(I, axis=0)
 
