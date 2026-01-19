@@ -5,7 +5,13 @@ import numpy as np
 from PIL import Image
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi import UploadFile, File, Form
-from keras.models import load_model
+try:
+    import tflite_runtime.interpreter as tflite
+except ImportError:
+    try:
+        from tensorflow import lite as tflite
+    except ImportError:
+        raise ImportError("Could not import tflite_runtime or tensorflow. Please install one of them.")
 from sqlalchemy import insert, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +22,12 @@ from utils import class_names, SIZE, SIZE_TO_CROP
 
 main_router = APIRouter()
 
-probability_model = load_model("model_chess_prediction.h5")
+# Загрузка TFLite модели
+interpreter = tflite.Interpreter(model_path="model_chess_prediction.tflite")
+interpreter.allocate_tensors()
+
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
 
 MEDIA_FOLDER = Path("media")
 LAST_MEDIA_FOLDER = Path("media/last_recognition")
@@ -47,17 +58,15 @@ async def upload_chess_image(
             content = await file.read()
             f.write(content)
 
-        image_id = await db.scalar(
-            insert(ChessImage)
-            .values(
-                filename=unique_name,
-                x1=x1,
-                y1=y1,
-                x2=x2,
-                y2=y2,
-            )
-            .returning(ChessImage.id)
+        stmt = insert(ChessImage).values(
+            filename=unique_name,
+            x1=x1,
+            y1=y1,
+            x2=x2,
+            y2=y2,
         )
+        result = await db.execute(stmt)
+        image_id = result.lastrowid
 
         await db.commit()
 
@@ -69,13 +78,16 @@ async def upload_chess_image(
             .values(result=fen)
         )
         await db.commit()
-
+        
         lichess_url = f"https://lichess.org/editor/{fen} w KQkq - 0 1"
         return {"fen": fen, "lichess_url": lichess_url}
 
     except Exception as e:
         logger.error(f"Error in upload: {e}")
         raise HTTPException(status_code=500, detail=f"Internal error: {e}")
+    finally:
+        if 'file_path' in locals() and file_path.exists():
+            file_path.unlink()
 
 
 async def process_chess_board(image_path: Path, x1: int, y1: int, x2: int, y2: int, is_white: bool = True):
@@ -108,10 +120,13 @@ async def process_chess_board(image_path: Path, x1: int, y1: int, x2: int, y2: i
                 )
                 resized = cell.resize(SIZE, resample=Image.Resampling.LANCZOS).crop(SIZE_TO_CROP)
                 # cell.save(f"media/last_recognition/{i}_{j}.png")
-                I = np.array(resized) / 255.0
+                I = np.array(resized, dtype=np.float32) / 255.0
                 I = np.expand_dims(I, axis=0)
 
-                predictions = probability_model.predict(I)
+                interpreter.set_tensor(input_details[0]['index'], I)
+                interpreter.invoke()
+                predictions = interpreter.get_tensor(output_details[0]['index'])
+                
                 predicted_label = np.argmax(predictions[0])
                 row += class_names[predicted_label]
 

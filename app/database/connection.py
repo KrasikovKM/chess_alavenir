@@ -1,13 +1,14 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import NullPool
 
 from config import *
 
 
-DATABASE_URL = f'postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+DATABASE_URL = f'mysql+aiomysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 engine_sd_api = create_async_engine(DATABASE_URL, pool_pre_ping=True, poolclass=NullPool)
 async_session_api = async_sessionmaker(
@@ -16,10 +17,7 @@ async_session_api = async_sessionmaker(
 
 
 async def get_db():
-    db = async_session_api()
-    try:
+    async with async_session_api() as db:
         yield db
-    finally:
-        await db.close()
 
 
